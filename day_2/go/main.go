@@ -26,11 +26,12 @@ func main() {
     absPath, err := filepath.Abs(path)
     check(err)
     dat, err := os.ReadFile(absPath)
+    check(err)
     dat_string := strings.Trim(string(dat), "\n")
     lines := strings.Split(dat_string, "\n")
     games := []Game{}
-    for _, x := range lines {
-        game_colors_split := strings.Split(x, ": ")
+    for _, line := range lines {
+        game_colors_split := strings.Split(line, ": ")
         game_id := strings.Split(game_colors_split[0], " ")[1]
         id_int, err := strconv.Atoi(game_id)
         check(err)
