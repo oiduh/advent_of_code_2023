@@ -23,6 +23,12 @@ const (
     EAST
 )
 
+type cycle struct {
+    matrix [][]rune
+    count int
+    indices []int
+}
+
 func main() {
     input_file := os.Args[1]
     abs_path, err := filepath.Abs(input_file)
@@ -45,70 +51,45 @@ func main() {
     // result 2
     matrix_2 := make([][]rune, len(matrix_og))
     copy(matrix_2, matrix_og)
-    iterations_full := 1000000000
-    iterations :=  5000
-    history := map[int]([]int){}
-    for idx := 0; idx < iterations; idx++ {
+    iterations := 1000000000
+    history := map[string]cycle{}
+    idx := 0
+    repeat := false
+    for idx < iterations {
+        key := generate_key(matrix_2)
+        if found, ok := history[key]; ok && !repeat {
+            if found.count >= 2 {
+                repeat = true
+                diff := found.indices[len(found.indices)-1] - found.indices[len(found.indices)-2]
+                // spins left
+                idx = iterations - (iterations-found.indices[len(found.indices)-1])%diff
+                continue
+            }
+        }
         matrix_2 = tilt(matrix_2, NORTH)
         matrix_2 = tilt(matrix_2, WEST)
         matrix_2 = tilt(matrix_2, SOUTH)
         matrix_2 = tilt(matrix_2, EAST)
-        tmp := count_score(matrix_2)
-        history[tmp] = append(history[tmp], idx)
-        skip := false
-        for _, y := range history {
-            if len(y) > 100 {
-                skip = true
-            }
+        if found, ok := history[key]; ok {
+            found.count++
+            found.indices = append(found.indices, idx)
+            history[key] = found
+        } else {
+            history[key] = cycle{matrix: matrix_2, count: 1, indices: []int{idx}}
         }
-        if skip {
-            break
-        }
+        idx++
     }
-    for x, y := range history {
-        if len(y) > 40 {
-            fmt.Printf("%d %d\n", x, y[len(y)-10:])
-            calc_next(y[len(y)-10:])
-            fmt.Println((iterations_full-y[len(y)-1])%11)
-        }
-    }
-    fmt.Println(iterations_full%11)
-
     result_2 := count_score(matrix_2)
     fmt.Printf("Result 2: %d\n", result_2)
-
 }
 
-func calc_next(arr []int) int {
-    tmp := make([]int, len(arr))
-    copy(tmp, arr)
-    x := [][]int{}
-    for !all_zero(tmp) {
-        y := []int{}
-        for idx := 0; idx < len(tmp)-1; idx++ {
-            y = append(y, tmp[idx+1]-tmp[idx])
-        }
-        x = append(x, y)
-        tmp = y
+func generate_key(matrix [][]rune) string {
+    key := ""
+    for _, line := range matrix {
+        key += string(line)
     }
-
-    for _, a := range x {
-        fmt.Println(a)
-    }
-
-
-    return 0
+    return key
 }
-
-func all_zero(arr []int) bool {
-    for _, item := range arr {
-        if item != 0 {
-            return false
-        }
-    }
-    return true
-}
-
 func count_score(matrix [][]rune) int {
     result := 0
     for idx := 0; idx < len(matrix); idx++ {
