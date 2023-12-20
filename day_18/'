@@ -1,0 +1,165 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
+}
+
+type Coordinate struct {
+    x, y int
+}
+
+type Direction int
+const(
+    NORTH Direction = iota
+    EAST
+    SOUTH
+    WEST
+    DEFAULT
+)
+
+type DigInstruction struct {
+    direction Direction
+    length int
+    color string
+}
+
+type DigPlan struct {
+    instructions []DigInstruction
+}
+
+func get_min_max(arr []int) (int, int) {
+    res_min, res_max := math.MaxInt, 0
+    for _, x := range arr {
+        if x > res_max {
+            res_max = x
+        }
+        if x < res_min {
+            res_min = x
+        }
+    }
+    return res_min, res_max
+}
+
+
+func main() {
+    input_file := os.Args[1]
+    abs_path, err := filepath.Abs(input_file)
+    check(err)
+    data, err := os.ReadFile(abs_path)
+    data_string := strings.Trim(string(data), "\n")
+    lines := strings.Split(data_string, "\n")
+    dig_plan := DigPlan{instructions: []DigInstruction{}}
+    for _, line := range lines {
+        new_instruction := DigInstruction{}
+        split := strings.Split(line, " ")
+        number, err := strconv.Atoi(split[1])
+        check(err)
+        new_instruction.color = split[2]
+        number++
+        switch split[0] {
+        case "U":
+            new_instruction.direction = NORTH
+            number *= -1
+        case "R":
+            new_instruction.direction = EAST
+        case "D":
+            new_instruction.direction = SOUTH
+        case "L":
+            new_instruction.direction = WEST
+            number *= -1
+        }
+        new_instruction.length = number
+        dig_plan.instructions = append(dig_plan.instructions, new_instruction)
+    }
+
+    x, y := 0, 0
+    area := 0
+    for _, dig_instruction := range dig_plan.instructions {
+        dx, dy := 0, 0
+        if dig_instruction.direction == NORTH || dig_instruction.direction == SOUTH {
+            dx = dig_instruction.length 
+        } else {
+            dy = dig_instruction.length
+        }
+        x += dx
+        y += dy
+        area += x * dy
+        fmt.Println(area)
+    }
+    fmt.Println(area)
+
+    widths := []int{}
+    heights := []int{}
+    for _, dig_instruction := range dig_plan.instructions {
+        if dig_instruction.direction == EAST || dig_instruction.direction == WEST {
+            if len(widths) > 0 {
+                widths = append(widths, widths[len(widths)-1] + dig_instruction.length)
+            } else {
+                widths = append(widths, dig_instruction.length)
+            }
+        }
+        if dig_instruction.direction == NORTH || dig_instruction.direction == SOUTH {
+            if len(heights) > 0 {
+                heights = append(heights, heights[len(heights)-1] + dig_instruction.length)
+            } else {
+                heights = append(heights, dig_instruction.length)
+            }
+        }
+    }
+
+    offset_y, max_width := get_min_max(widths)
+    offset_x, max_height := get_min_max(heights)
+
+    total_width := max_width - offset_y
+    total_height := max_height - offset_x
+
+
+    matrix := make([][]rune, total_height+1)
+    for i := range matrix {
+        matrix[i] = make([]rune, total_width+1)
+        for j := range matrix[i] {
+            matrix[i][j] = '.'
+        }
+    }
+
+    if offset_x < 0 {
+        offset_x *=-1
+    }
+    if offset_y < 0 {
+        offset_y *=-1
+    }
+
+    for _, dig_instruction := range dig_plan.instructions {
+        if dig_instruction.direction == NORTH || dig_instruction.direction == SOUTH {
+            var step int
+            for step = min(0, dig_instruction.length); step < max(1, dig_instruction.length); step++ {
+                matrix[offset_x+x+step][offset_y+y] = '#'
+            }
+            x += dig_instruction.length
+        } else {
+            var step int
+            for step = min(0, dig_instruction.length); step < max(1, dig_instruction.length); step++ {
+                matrix[offset_x+x][offset_y+y+step] = '#'
+            }
+            y += dig_instruction.length
+        }
+    }
+
+    for _, row := range matrix {
+        for _, char := range row {
+            fmt.Printf("%c", char)
+        }
+        fmt.Println()
+    }
+}
